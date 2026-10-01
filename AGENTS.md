@@ -387,6 +387,23 @@ Types: `feat`, `fix`, `refactor`, `docs`, `chore`
 
 ## Commands
 
+`make help` lists every target. The Makefile builds into the shared `~/.rust/target` (override with `CARGO_TARGET=...`) and installs into `~/.local/bin` (override with `PREFIX=...`).
+
+```bash
+make prereqs                   # Verify cargo, rustc >= rust-version, target and install dirs
+make build                     # Release build (runs prereqs first)
+make rebuild                   # clean + build, sequentially even under -j
+make install                   # Copy into BINDIR; reports version, sha256, signature, PATH shadowing
+make check                     # clippy --all-targets -D warnings + tests (pre-push gate)
+make ci                        # The exact steps of .github/workflows/ci.yml
+make cross-check               # Linux clippy + tests and Windows-target clippy in Docker (rust:latest)
+make fmt-check                 # rustfmt check; not in `check` because upstream main is not rustfmt-clean
+make once / make demo          # Live / demo snapshot
+make run ARGS="--theme nord"   # TUI from source
+```
+
+Plain cargo:
+
 ```bash
 cargo build                    # Build
 cargo run                      # Run TUI

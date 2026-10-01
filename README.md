@@ -33,6 +33,15 @@ curl --proto '=https' --tlsv1.2 -LsSf https://github.com/graykode/abtop/releases
 cargo install abtop
 ```
 
+### From source
+
+```bash
+make build     # checks the toolchain, then builds the release binary
+make install   # copies it into ~/.local/bin (override with PREFIX=/some/prefix)
+```
+
+`make help` lists the other targets (tests, lint, CI and cross-platform checks).
+
 ### Windows
 
 Native support — no WSL required. Uses `sysinfo` for process info and host CPU/MEM metrics, and `netstat -ano` for listening ports. Windows has no load average, so LOAD is reported as 0. OpenCode session discovery additionally requires the `sqlite3` CLI (`winget install SQLite.SQLite`); without it abtop prints a one-time warning to stderr.
