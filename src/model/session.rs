@@ -133,13 +133,14 @@ pub const MAX_CHAT_MESSAGES: usize = 12;
 /// Which surface launched this session's process, detected from the resolved
 /// executable path in its command line. Always `Cli` for Codex and OpenCode
 /// sessions — no desktop-app or editor-extension equivalent is known for
-/// those tools yet.
+/// those tools yet. DSH is `App` for the desktop host, else `Cli`.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize)]
 pub enum LaunchSurface {
     /// Plain CLI invocation: a terminal shell running an npm/homebrew/native
     /// install (or the auto-updater's `versions/<ver>` layout).
     Cli,
-    /// The Claude desktop app's bundled `claude-code` binary.
+    /// The Claude desktop app's bundled `claude-code` binary, or the DSH
+    /// desktop host.
     App,
     /// An editor extension (VS Code, Cursor, Windsurf, ...).
     Ide,
@@ -160,7 +161,7 @@ impl LaunchSurface {
 
 #[derive(Debug, Clone)]
 pub struct AgentSession {
-    /// Which CLI tool this session belongs to: "claude", "codex", etc.
+    /// Which CLI tool this session belongs to: "claude", "codex", "opencode", "dsh".
     /// Also used as the identifier for the `hidden_agents` config key
     /// (case-insensitive match).
     pub agent_cli: &'static str,
@@ -173,8 +174,8 @@ pub struct AgentSession {
     pub started_at: u64,
     pub status: SessionStatus,
     pub model: String,
-    /// Reasoning effort setting (Codex CLI only: "minimal" | "low" | "medium" | "high").
-    /// Empty string when unknown or not applicable.
+    /// Reasoning effort setting (Codex: "minimal" | "low" | "medium" | "high";
+    /// DSH: the selected `reasoningEffort`). Empty when unknown or not applicable.
     pub effort: String,
     pub context_percent: f64,
     pub total_input_tokens: u64,
@@ -222,6 +223,7 @@ pub struct AgentSession {
     /// Config root directory for this session's agent (home-abbreviated, e.g. "~/.claude-work").
     /// For Claude Code: the active .claude* profile folder. For Codex: "~/.codex".
     /// For OpenCode: the data directory containing opencode.db.
+    /// For DSH: the DSH home (e.g. "~/.dsh"), plus ":{profile}" for `--profile`.
     pub config_root: String,
 }
 

@@ -28,7 +28,7 @@ impl Default for PanelVisibility {
 pub struct AppConfig {
     pub theme: String,
     /// Agent CLI names to exclude from the TUI (e.g. ["codex"] to hide Codex).
-    /// Matched case-insensitively against each collector's agent_cli identifier.
+    /// Case-insensitive match on agent_cli: "claude", "codex", "opencode", "dsh".
     pub hidden_agents: Vec<String>,
     /// Additional Claude config directories to scan for sessions.
     /// Useful for multi-profile setups that use separate CLAUDE_CONFIG_DIR roots.

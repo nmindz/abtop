@@ -85,10 +85,9 @@ pub struct SubAgentView {
 /// A single session, flattened and curated for JSON consumers.
 #[derive(Debug, Clone, Serialize)]
 pub struct SessionView {
-    /// Owning CLI: "claude", "codex", "opencode".
+    /// Owning CLI: "claude", "codex", "opencode", "dsh".
     pub agent_cli: &'static str,
-    /// Which surface launched this session (CLI / Claude desktop app / IDE
-    /// extension); always `Cli` for Codex and OpenCode.
+    /// Launch surface (CLI / desktop app / IDE); always `Cli` for Codex and OpenCode.
     pub launch_surface: LaunchSurface,
     /// OS process id of the agent CLI for this session.
     pub pid: u32,
@@ -98,13 +97,13 @@ pub struct SessionView {
     pub project_name: String,
     /// Absolute working directory of the session.
     pub cwd: String,
-    /// Home-abbreviated config root (e.g. "~/.claude", "~/.codex").
+    /// Home-abbreviated config root (e.g. "~/.claude", "~/.codex", "~/.dsh:web").
     pub config_root: String,
     /// Coarse activity state; serializes as its variant name (e.g. `"Thinking"`).
     pub status: SessionStatus,
     /// Model identifier reported by the session (e.g. `"claude-opus-4-6"`).
     pub model: String,
-    /// Reasoning effort (Codex only); empty when N/A.
+    /// Reasoning effort (Codex and DSH); empty when N/A.
     pub effort: String,
     /// Agent CLI version string, if known.
     pub version: String,
@@ -164,7 +163,7 @@ pub struct SessionView {
 pub struct McpServerView {
     /// OS process id of the MCP server.
     pub pid: u32,
-    /// Resolved parent CLI: "claude", "codex", or "?".
+    /// Resolved parent CLI: "claude", "codex", "dsh", or "?".
     pub parent_cli: &'static str,
     /// `-c profile=<name>` value, if any.
     pub profile: Option<String>,

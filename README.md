@@ -2,8 +2,8 @@
 
 **Like [btop](https://github.com/aristocratos/btop), but for your AI coding agents.**
 
-See every Claude Code, Codex CLI, and OpenCode session at a glance — token usage, context window %, rate limits, child processes, open ports, and more.
-Claude Code, Codex CLI, and OpenCode sessions are discovered from local process/file state, so multiple active profiles are supported across macOS, Linux, and Windows.
+See every Claude Code, Codex CLI, OpenCode, and DeepSeek Harness (DSH) session at a glance — token usage, context window %, rate limits, child processes, open ports, and more.
+Claude Code, Codex CLI, OpenCode, and DSH sessions are discovered from local process/file state, so multiple active profiles are supported across macOS, Linux, and Windows.
 
 ![demo](https://raw.githubusercontent.com/graykode/abtop/main/assets/demo.gif)
 
@@ -75,20 +75,22 @@ tmux new -s work
 
 ## Supported Agents
 
-| Feature           | Claude Code | Codex CLI | OpenCode |
-| ----------------- | :---------: | :-------: | :------: |
-| Session Discovery |     ✅      |    ✅     |    ✅    |
-| Token Tracking    |     ✅      |    ✅     |    ✅    |
-| Context Window %  |     ✅      |    ✅     |    ❌    |
-| Status Detection  |     ✅      |    ✅     |    ✅    |
-| Current Task      |     ✅      |    ✅     |    ❌    |
-| Rate Limit        |     ✅      |    ✅     |    ❌    |
-| Git Status        |     ✅      |    ✅     |    ✅    |
-| Children / Ports  |     ✅      |    ✅     |    ✅    |
-| Subagents         |     ✅      |    ❌     |    ❌    |
-| Memory Status     |     ✅      |    ❌     |    ❌    |
+| Feature           | Claude Code | Codex CLI | OpenCode | DSH |
+| ----------------- | :---------: | :-------: | :------: | :-: |
+| Session Discovery |     ✅      |    ✅     |    ✅    | ✅  |
+| Token Tracking    |     ✅      |    ✅     |    ✅    | ✅  |
+| Context Window %  |     ✅      |    ✅     |    ❌    | ✅  |
+| Status Detection  |     ✅      |    ✅     |    ✅    | ✅  |
+| Current Task      |     ✅      |    ✅     |    ❌    | ✅  |
+| Rate Limit        |     ✅      |    ✅     |    ❌    | ❌  |
+| Git Status        |     ✅      |    ✅     |    ✅    | ✅  |
+| Children / Ports  |     ✅      |    ✅     |    ✅    | ✅  |
+| Subagents         |     ✅      |    ❌     |    ❌    | ✅  |
+| Memory Status     |     ✅      |    ❌     |    ❌    | ❌  |
 
 OpenCode support reads the local SQLite database at `~/.local/share/opencode/opencode.db` (also the default location on Windows; `%LOCALAPPDATA%\opencode` and `%APPDATA%\opencode` are probed as fallbacks) and requires `sqlite3` in `PATH` (on Windows: `winget install SQLite.SQLite`).
+
+DSH (DeepSeek Harness) sessions are found through the live `session.lock` leases held open by running `dsh` host processes (CLI/TUI, `dsh --profile web`, and the desktop host); each lease points at an append-only, zstd-framed log at `$DSH_HOME/sessions/<project>/<session>/session.vN.jsonl.zstd` (`$DSH_HOME` defaults to `~/.dsh`), which abtop tails read-only. One Web or desktop host can own many sessions at once, so several rows may share a PID; host memory and child processes are shown on one row only, and `x` refuses to kill a PID that hosts more than one listed session or any DSH Web/desktop host. Subagent sessions are folded under their parent. DSH writes its own session titles, which abtop shows as-is instead of generating `claude --print` summaries. There is no DSH quota row. Hide DSH sessions with `hidden_agents = ["dsh"]`.
 
 ## Themes
 
@@ -126,6 +128,7 @@ Light themes (`light` — Solarized cream, `white` — GitHub-style pure white) 
 theme = "btop"
 # Hide specific agent CLIs from the TUI (case-insensitive).
 # Useful if you only use one agent and want a cleaner view.
+# Names: "claude", "codex", "opencode", "dsh".
 hidden_agents = ["codex"]
 # Additional Claude Code profile roots to scan.
 # abtop also auto-discovers ~/.claude and ~/.claude-* roots that contain
@@ -191,7 +194,7 @@ is a reference consumer: a local-first web dashboard built on exactly this API.
 
 ## Privacy
 
-abtop reads local files and local process/open-file metadata only. No API keys, no auth. In the TUI and `--once` output, tool names and file paths are shown, but file contents and prompt text are never displayed. Session summaries are generated via `claude --print`, which makes its own API call — this is the only indirect network usage.
+abtop reads local files and local process/open-file metadata only. No API keys, no auth. In the TUI and `--once` output, tool names and file paths are shown, but file contents and prompt text are never displayed. Session summaries are generated via `claude --print`, which makes its own API call — this is the only indirect network usage. DSH sessions reuse DSH's own titles and never trigger it.
 
 The JSON snapshot includes richer local dashboard data, including `summary`, `chat_messages`, working directories, config roots, tool-call previews, child process commands, token counts, and port metadata. Chat text is bounded and redacted by the collectors, but it is still derived from local transcripts and may contain sensitive project context. Treat JSON snapshots as local/private data and avoid writing them to shared logs or exposing them on a network without your own access controls.
 

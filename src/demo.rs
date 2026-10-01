@@ -514,6 +514,116 @@ pub fn populate_demo(app: &mut App) {
             config_root: "~/.local/share/opencode".into(),
             file_accesses: vec![],
         },
+        AgentSession {
+            agent_cli: "dsh",
+            launch_surface: LaunchSurface::Cli,
+            pid: 9720,
+            session_id: "f6a7b8c9-abcd-ef01-2345-666666666666".into(),
+            cwd: "/Users/demo/search-index".into(),
+            project_name: "search-index".into(),
+            started_at: now - 34 * 60 * 1000, // 34m ago
+            status: SessionStatus::Executing,
+            model: "claude-opus-5-5".into(),
+            effort: "high".into(),
+            context_percent: 21.0,
+            total_input_tokens: 9_400,
+            total_output_tokens: 26_700,
+            total_cache_read: 1_840_000,
+            total_cache_create: 96_000,
+            turn_count: 27,
+            current_tasks: vec!["Bash cargo test --release".into()],
+            mem_mb: 212,
+            version: "0.9.3".into(),
+            git_branch: "feat/bm25".into(),
+            git_added: 2,
+            git_modified: 5,
+            token_history: vec![
+                42000, 58000, 71000, 66000, 83000, 90000, 78000, 95000, 104000, 99000, 112000,
+                118000, 109000, 126000, 131000, 122000, 138000, 145000, 136000, 152000, 160000,
+                148000, 167000, 171000, 158000, 176000, 184000,
+            ],
+            context_history: vec![
+                41000, 57000, 70000, 84000, 96000, 109000, 121000, 134000, 146000, 158000, 170000,
+                182000, 193000, 204000, 212000,
+            ],
+            compaction_count: 0,
+            context_window: 1_000_000,
+            subagents: vec![
+                SubAgent {
+                    name: "Map tokenizer call sites".into(),
+                    status: "done".into(),
+                    tokens: 64_300,
+                },
+                SubAgent {
+                    name: "Benchmark ranking".into(),
+                    status: "working".into(),
+                    tokens: 21_800,
+                },
+            ],
+            mem_file_count: 0,
+            mem_line_count: 0,
+            children: vec![ChildProcess {
+                pid: 9788,
+                command: "cargo test --release".into(),
+                mem_kb: 184_000,
+                port: None,
+            }],
+            first_assistant_text: String::new(),
+            chat_messages: vec![
+                ChatMessage {
+                    role: ChatRole::User,
+                    text: "Replace TF-IDF scoring with BM25 and keep the index format stable".into(),
+                },
+                ChatMessage {
+                    role: ChatRole::Assistant,
+                    text: "Scorer is swapped behind the same trait; running the ranking suite before touching the on-disk format.".into(),
+                },
+            ],
+            initial_prompt: "Replace TF-IDF scoring with BM25".into(),
+            tool_calls: vec![
+                ToolCall {
+                    name: "Read".into(),
+                    arg: "index/scorer.rs".into(),
+                    duration_ms: 48,
+                },
+                ToolCall {
+                    name: "Agent".into(),
+                    arg: "Map tokenizer call sites".into(),
+                    duration_ms: 41_200,
+                },
+                ToolCall {
+                    name: "Edit".into(),
+                    arg: "index/scorer.rs".into(),
+                    duration_ms: 130,
+                },
+                ToolCall {
+                    name: "Bash".into(),
+                    arg: "cargo build".into(),
+                    duration_ms: 6_900,
+                },
+                // Currently running.
+                ToolCall {
+                    name: "Bash".into(),
+                    arg: "cargo test --release".into(),
+                    duration_ms: 0,
+                },
+            ],
+            pending_since_ms: now - 9_000,
+            thinking_since_ms: 0,
+            config_root: "~/.dsh".into(),
+            file_accesses: vec![
+                FileAccess {
+                    path: "index/scorer.rs".into(),
+                    operation: FileOp::Read,
+                    turn_index: 3,
+                },
+                FileAccess {
+                    path: "index/scorer.rs".into(),
+                    operation: FileOp::Edit,
+                    turn_index: 9,
+                },
+            ],
+        },
     ];
 
     // --- Summaries (pre-populated, no LLM calls) ---
@@ -537,6 +647,7 @@ pub fn populate_demo(app: &mut App) {
         "ses_e5f6a7b8-9abc-def0-1234-555555555555".into(),
         "Terraform multi-region refactor".into(),
     );
+    // DSH sessions carry their own titles; none is generated for them.
 
     // --- Rate limits ---
     app.rate_limits = vec![

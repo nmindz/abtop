@@ -45,7 +45,7 @@ pub struct McpServer {
     /// Parent process PID — kept for debug; not currently rendered.
     #[allow(dead_code)]
     pub ppid: u32,
-    /// Resolved CLI of the parent process: "claude", "codex", or "?".
+    /// Resolved CLI of the parent process: "claude", "codex", "dsh", or "?".
     pub parent_cli: &'static str,
     /// Full ps command — kept for debug; not currently rendered.
     #[allow(dead_code)]
@@ -168,6 +168,8 @@ fn resolve_parent_cli(ppid: u32, process_info: &HashMap<u32, ProcInfo>) -> &'sta
         "claude"
     } else if process::cmd_has_binary(cmd, "codex") {
         "codex"
+    } else if super::dsh::is_dsh_command(cmd) {
+        "dsh"
     } else {
         "?"
     }

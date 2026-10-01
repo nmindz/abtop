@@ -1,12 +1,15 @@
 pub mod claude;
 pub mod codex;
+pub mod dsh;
 pub mod mcp;
+mod open_paths;
 pub mod opencode;
 pub mod process;
 pub mod rate_limit;
 
 pub use claude::ClaudeCollector;
 pub use codex::CodexCollector;
+pub use dsh::DshCollector;
 pub use mcp::McpServer;
 pub use opencode::OpenCodeCollector;
 pub use rate_limit::read_rate_limits;
@@ -282,7 +285,7 @@ impl Drop for DesktopRolloutScanner {
     }
 }
 
-/// Aggregates sessions from multiple collectors (Claude, Codex, etc.)
+/// Aggregates sessions from multiple collectors (Claude, Codex, OpenCode, DSH).
 pub struct MultiCollector {
     collectors: Vec<Box<dyn AgentCollector>>,
     codex_enabled: bool,
@@ -334,6 +337,9 @@ impl MultiCollector {
         }
         if !is_hidden("opencode") {
             collectors.push(Box::new(OpenCodeCollector::new()));
+        }
+        if !is_hidden("dsh") {
+            collectors.push(Box::new(DshCollector::new()));
         }
         let codex_enabled = !is_hidden("codex");
         Self {
@@ -418,10 +424,13 @@ impl MultiCollector {
 
         // Git stats: refresh only on slow tick
         if slow_tick {
+            // One `git status` per distinct cwd: a DSH host contributes many rows per project.
             self.cached_git.clear();
             for s in &mut all {
-                let stats = process::collect_git_stats(&s.cwd);
-                self.cached_git.insert(s.cwd.clone(), stats);
+                let stats = *self
+                    .cached_git
+                    .entry(s.cwd.clone())
+                    .or_insert_with(|| process::collect_git_stats(&s.cwd));
                 s.git_added = stats.0;
                 s.git_modified = stats.1;
             }
@@ -507,27 +516,29 @@ mod tests {
     #[test]
     fn with_hidden_empty_keeps_all_collectors() {
         let mc = MultiCollector::with_hidden(&[]);
-        assert_eq!(mc.collectors.len(), 3);
+        assert_eq!(mc.collectors.len(), 4);
     }
 
     #[test]
     fn with_hidden_codex_drops_codex_only() {
         let mc = MultiCollector::with_hidden(&["codex".to_string()]);
-        assert_eq!(mc.collectors.len(), 2);
+        assert_eq!(mc.collectors.len(), 3);
     }
 
     #[test]
     fn with_hidden_is_case_insensitive() {
         let mc = MultiCollector::with_hidden(&["CODEX".to_string()]);
-        assert_eq!(mc.collectors.len(), 2);
+        assert_eq!(mc.collectors.len(), 3);
         let mc = MultiCollector::with_hidden(&["Claude".to_string()]);
-        assert_eq!(mc.collectors.len(), 2);
+        assert_eq!(mc.collectors.len(), 3);
+        let mc = MultiCollector::with_hidden(&["DSH".to_string()]);
+        assert_eq!(mc.collectors.len(), 3);
     }
 
     #[test]
     fn with_hidden_unknown_names_are_ignored() {
         let mc = MultiCollector::with_hidden(&["kiro".to_string(), "gemini".to_string()]);
-        assert_eq!(mc.collectors.len(), 3);
+        assert_eq!(mc.collectors.len(), 4);
     }
 
     #[test]
@@ -536,6 +547,7 @@ mod tests {
             "claude".to_string(),
             "codex".to_string(),
             "opencode".to_string(),
+            "dsh".to_string(),
         ]);
         assert!(mc.collectors.is_empty());
     }

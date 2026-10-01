@@ -574,6 +574,9 @@ impl App {
 
         // Spawn summary jobs for sessions that need one
         for s in &self.sessions {
+            if !wants_generated_summary(s) {
+                continue;
+            }
             let retries = self
                 .summary_retries
                 .get(&s.session_id)
@@ -611,7 +614,8 @@ impl App {
     /// True if any session still qualifies for a summary retry.
     pub fn has_retryable_summaries(&self) -> bool {
         self.sessions.iter().any(|s| {
-            (!s.initial_prompt.is_empty() || !s.first_assistant_text.is_empty())
+            wants_generated_summary(s)
+                && (!s.initial_prompt.is_empty() || !s.first_assistant_text.is_empty())
                 && !self.summaries.contains_key(&s.session_id)
                 && !self.pending_summaries.contains(&s.session_id)
                 && self
@@ -713,6 +717,13 @@ impl App {
         }
         let session = &self.sessions[self.selected];
         if matches!(session.status, SessionStatus::Done | SessionStatus::Unknown) {
+            return;
+        }
+        let refusal = shared_host_kill_block(&self.sessions, self.selected)
+            .or_else(|| (session.agent_cli == "dsh").then(|| dsh_host_kill_block(session.pid))?);
+        if let Some(reason) = refusal {
+            self.kill_confirm = None;
+            self.set_status(reason);
             return;
         }
 
@@ -1002,6 +1013,33 @@ fn is_supported_agent_command(cmd: &str) -> bool {
     crate::collector::process::cmd_has_binary(cmd, "claude")
         || crate::collector::process::cmd_has_binary(cmd, "codex")
         || crate::collector::process::cmd_has_binary(cmd, "opencode")
+        || crate::collector::dsh::is_dsh_command(cmd)
+}
+
+/// DSH writes its own `session/title`, so abtop never spends Claude quota
+/// generating one.
+fn wants_generated_summary(session: &AgentSession) -> bool {
+    session.agent_cli != "dsh"
+}
+
+/// Refuse `x` on a DSH Web or desktop host even with one listed session:
+/// killing it ends the GUI and every session it could attach.
+fn dsh_host_kill_block(pid: u32) -> Option<String> {
+    let output = std::process::Command::new("ps")
+        .args(["-p", &pid.to_string(), "-o", "command="])
+        .output()
+        .ok()?;
+    let cmd = String::from_utf8_lossy(&output.stdout);
+    crate::collector::dsh::host_serves_many_sessions(cmd.trim())
+        .then(|| format!("PID {} is a DSH Web/desktop host; not killing", pid))
+}
+
+/// Refuse `x` when the selected PID also hosts other listed sessions (a DSH
+/// Web or desktop host); SIGKILL would end all of them.
+fn shared_host_kill_block(sessions: &[AgentSession], selected: usize) -> Option<String> {
+    let pid = sessions.get(selected)?.pid;
+    let hosted = sessions.iter().filter(|s| s.pid == pid).count();
+    (hosted > 1).then(|| format!("PID {} hosts {} sessions; not killing", pid, hosted))
 }
 
 fn is_killable_agent_command(cmd: &str) -> bool {
@@ -1107,11 +1145,44 @@ mod tests {
     }
 
     #[test]
+    fn supported_agent_command_accepts_dsh() {
+        assert!(is_supported_agent_command(
+            "node /Users/u/.local/bin/dsh --profile web"
+        ));
+    }
+
+    #[test]
+    fn dsh_sessions_skip_generated_summaries() {
+        assert!(!wants_generated_summary(&waiting_session("dsh")));
+        assert!(wants_generated_summary(&waiting_session("claude")));
+    }
+
+    #[test]
+    fn kill_is_blocked_when_pid_hosts_several_sessions() {
+        let mut a = waiting_session("dsh");
+        a.pid = 42;
+        let mut b = waiting_session("dsh");
+        b.pid = 42;
+        let mut c = waiting_session("claude");
+        c.pid = 7;
+        let sessions = vec![a, b, c];
+        assert_eq!(
+            shared_host_kill_block(&sessions, 0).as_deref(),
+            Some("PID 42 hosts 2 sessions; not killing")
+        );
+        assert_eq!(shared_host_kill_block(&sessions, 2), None);
+        assert_eq!(shared_host_kill_block(&sessions, 9), None);
+    }
+
+    #[test]
     fn killable_agent_command_rejects_codex_app_server() {
         assert!(is_killable_agent_command("codex --resume abc"));
         assert!(is_killable_agent_command("/usr/local/bin/claude"));
         assert!(!is_killable_agent_command(
             "/Applications/Codex.app/Contents/Resources/codex app-server --analytics-default-enabled"
+        ));
+        assert!(is_killable_agent_command(
+            "node /Users/u/.local/bin/dsh --profile tui"
         ));
     }
 }
